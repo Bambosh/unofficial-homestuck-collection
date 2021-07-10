@@ -1,6 +1,6 @@
 <template>
   <div id="app" :class="[
-    $root.theme, 
+    theme,
     // $root.loadState != 'DONE' ? 'busy' : '',
     $localData.settings.showAddressBar ? 'addressBar' : 'noAddressBar'
     ]" v-if="$archive && $root.loadState !== 'ERROR'">
@@ -41,6 +41,49 @@
     computed: {
       tabList() {
         return this.$localData.tabData.tabList
+      },
+      tabTheme() {
+        let page_theme
+        const tab_components = this.$refs[this.$localData.tabData.activeTabKey]
+
+        if (tab_components) {
+          // Get theme from inner tab
+          page_theme = {
+            defined: tab_components[0].contentTheme, 
+            rendered: tab_components[0].theme
+          }
+        } else {
+          // There are no tabs at all yet
+          this.$logger.warn("No tabs! Using default")
+          page_theme = {defined: 'default', rendered: 'default'}
+        }
+        return page_theme
+      },
+      theme() {
+        let set_theme = this.$localData.settings.themeOverrideUI
+        // Default UI theme should be whatever the page is using
+
+        // If there is a theme override and a UI theme override,
+        // the UI theme override should apply even if force is unset
+        let theme = this.tabTheme.rendered
+
+        if (set_theme != 'default') {
+          // User has a specified theme
+          if (this.tabTheme.defined != 'default') {
+            // Page has a theme
+            if (this.$localData.settings.forceThemeOverrideUI) {
+              // If force is on, use the override theme
+              theme = set_theme
+            } else {
+              // Page takes priority over setting
+              theme = this.tabTheme.rendered
+            }
+          } else {
+            // User specified a theme, page did not
+            theme = set_theme
+          } 
+        }
+        return (theme == 'default' ? 'mspa' : theme)
       }
     },
     methods: {
@@ -173,6 +216,8 @@
         let { target, button } = event
         if (button == 2) {
           event.preventDefault()
+          // TODO: Sometimes contextMenu is undefined?
+          console.assert(this.$refs.contextMenu, this.$refs)
           this.$refs.contextMenu.open(event, target)
           return
         } else if (button == 3) {
