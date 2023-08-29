@@ -25,6 +25,10 @@ const routes = [
     props: true
   },
   {
+    path: '/search/:query',
+    props: true
+  },
+  {
     path: '/credits/:mode',
     props: true,
     children: [
@@ -254,6 +258,19 @@ const routes = [
     path: '/pxs/:cid',
     props: true,
     children: [
+      // {
+      //   path: '',
+      //   redirect: '1'
+      // },
+      {
+        path: ':pid',
+      },
+    ]
+  },
+  {
+    path: '/pxs/:cid',
+    props: true,
+    children: [
       {
         path: '',
         redirect: '1'
@@ -296,6 +313,19 @@ const routes = [
   {
     path: '/skaianet/:cursed_history',
     props: true
+  },
+  {
+    path: '/epilogues/:volume',
+    props: true,
+    children: [
+      {
+        path: '',
+        // redirect: '1'
+      },
+      {
+        path: ':page',
+      },
+    ]
   }
 ]
 

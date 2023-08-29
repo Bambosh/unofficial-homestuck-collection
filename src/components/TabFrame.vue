@@ -1,15 +1,20 @@
 <template>
     <div class="tabFrame" 
         :id="tab.key" 
-        :class='{ 
-            hidden: !tabIsActive,
-            forceScrollBar: $localData.settings.forceScrollBar,
-            forceLoad,  
-        }'
+        :class="[
+            theme,
+            {
+                hidden: !tabIsActive,
+                forceScrollBar: $localData.settings.forceScrollBar,
+                forceLoad
+            }
+        ]"
         :tabindex="(tabIsActive) ? -1 : false" 
         v-if="isLoaded"
-        @keyup.left="leftKeyPress"
-        @keyup.right="rightKeyPress"
+        @keyup.left="leftKeyUp"
+        @keyup.right="rightKeyUp"
+        @keydown.space="spaceBarDown"
+        @keyup.space="spaceBarUp"
         @keyup.f5="reload"
         ref="tabFrame"
     >
@@ -66,6 +71,8 @@ import SKAIANET from '@/components/Extras/Skaianet.vue'
 import SQUIDDLES from '@/components/Extras/Squiddles.vue'
 import EVENMORE from '@/components/Extras/EvenMore.vue'
 
+import EPILOGUES from '@/components/Beyond/Epilogues.vue'
+
 import MUSIC from '@/components/Music/MusicFrame.vue'
 
 import SOCIALS from '@/components/Socials/Socials.vue'
@@ -83,6 +90,7 @@ import TSO from '@/components/Comics/tso.vue'
 import SNAPS from '@/components/Comics/Snaps.vue'
 
 import TESTS from '@/components/Extras/tests.vue'
+import EDITOR from '@/components/CustomContent/PageEditor.vue'
 
 import ModBrowserPageMixin from '@/components/CustomContent/ModBrowserPageMixin.vue'
 
@@ -128,6 +136,8 @@ export default {
         SQUIDDLES,
         EVENMORE,
 
+        EPILOGUES,
+
         MUSIC,
         SOCIALS,
         DSTRIDER,
@@ -143,10 +153,12 @@ export default {
         TSO,
         SNAPS,
 
-        TESTS
+        TESTS,
+        EDITOR
     },
     data() {
         return {
+            scrollTopPrev: 0,
             gameOverThemeOverride: false,
             modBrowserPages: {}
         }
@@ -275,11 +287,12 @@ export default {
                 }
                 case 'PXS': {
                     if (this.$pageIsSpoiler('008753')) component = 'Spoiler'
-                    else if (this.routeParams.cid) {
-                        let p = parseInt(this.routeParams.pid)
-                        let data = this.$archive.comics.pxs.comics[this.routeParams.cid]
-                        if (this.routeParams.cid && (!this.$archive.comics.pxs.list.includes(this.routeParams.cid) || !data || !Number.isInteger(p) || data.pages.length < p || p < 1)) component = 'Error404'
-                    }
+                    // Paradox Space has its own internal 404 handler
+                    // else if (this.routeParams.cid && !['archive', 'news', 'credits'].includes(this.routeParams.cid)) {
+                    //     let p = parseInt(this.routeParams.pid) || 1
+                    //     let data = this.$archive.comics.pxs.comics[this.routeParams.cid]
+                    //     if (this.routeParams.cid && (!this.$archive.comics.pxs.list.includes(this.routeParams.cid) || !data || !Number.isInteger(p) || data.pages.length < p || p < 1)) component = 'Error404'
+                    // }
                     break
                 }
                 case 'TSO': {
@@ -413,8 +426,9 @@ export default {
             let theme = page_theme
 
             if (set_theme) {
-              if (page_theme != 'default') {
-                // Page has a theme
+              // Treat 'retro' for bq/ps/jb as "no special theme", for override/dark mode purposes.
+              if (page_theme != 'default' && page_theme != 'retro') {
+                // Page has a special theme
                 if (this.$localData.settings.forceThemeOverride) {
                   // If force is on, use the override theme
                   theme = set_theme
@@ -439,7 +453,7 @@ export default {
                 this.tab.url = u
             })
         },
-        leftKeyPress(e) {
+        leftKeyUp(e) {
             if (this.$localData.settings.arrowNav && 
                 this.$refs.page.keyNavEvent && 
                 !e.altKey && 
@@ -450,7 +464,7 @@ export default {
                 }
             }
         },
-        rightKeyPress(e) {
+        rightKeyUp(e) {
             if (this.$localData.settings.arrowNav && 
                 this.$refs.page.keyNavEvent && 
                 !e.altKey && 
@@ -459,6 +473,21 @@ export default {
                 if (frameEl.scrollLeft + frameEl.clientWidth == frameEl.scrollWidth) {
                     // Only send event if scrolling doesn't happen
                     this.$refs.page.keyNavEvent('right', e)
+                }
+            }
+        },
+        spaceBarDown(e) {
+            this.scrollTopPrev = this.$el.scrollTop
+        },
+        spaceBarUp(e) {
+            if (this.$localData.settings.arrowNav && 
+                this.$refs.page.spaceBarEvent && 
+                document.activeElement.tagName != 'INPUT' &&
+                document.activeElement.tagName != 'BUTTON') {
+                const frameEl = this.$el
+                if (frameEl.scrollTop == this.scrollTopPrev) {
+                    // Only send event if scrolling wasn't detected since the keyDown event
+                    this.$refs.page.spaceBarEvent(e)   
                 }
             }
         },
@@ -492,6 +521,7 @@ export default {
                 const context = this
                 title = componentObj.title(context)
             } else {
+                this.$logger.warn("Missing title function for", component, componentObj.title)
                 title = this.tab.url
             }
             

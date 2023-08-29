@@ -176,7 +176,7 @@ import StoryPageLink from '@/components/UIElements/StoryPageLink.vue'
 // import ENDOFHS from '@/components/SpecialPages/EndOfHS.vue'
 
 import Vue from 'vue'
-const prettier = require("prettier");
+// const prettier = require("prettier");
 
 // function intersect(...sets) {
 //     if (!sets.length) return new Set();
@@ -218,13 +218,13 @@ export default {
       try {
         const compiled = Vue.compile(this.compileTemplate)
         const code = compiled.render.toString()
-        return prettier.format(code, { semi: false })
+        return code // prettier.format(code, { semi: false })
       } catch (e) {
         return e.stack
       }
     },
     allConversations(){
-      let re = /<span style="color: #([^>]+?)">(\S+?):/g
+      let re = /<span style="color: #([A-Fa-f0-9]+)">([A-Z0-9^]+):/g
       return this.storyPages.filter(
           page => re.exec(page.content)
         ).reduce((acc, page) => {
@@ -238,7 +238,8 @@ export default {
       // Compute color: list<page> and color: set<nickname> mappings
       const {pagesByColor, speakersByColor} = Object.keys(this.allConversations).reduce((acc, pageId) => {
           this.allConversations[pageId].forEach(pair => {
-              const [color, nickname] = pair.split(":")
+              let [color, nickname] = pair.split(":")
+              color = color.toUpperCase()
               acc.pagesByColor[color] = acc.pagesByColor[color] || []
               acc.pagesByColor[color].push(pageId)
               acc.speakersByColor[color] = acc.speakersByColor[color] || []
@@ -255,12 +256,12 @@ export default {
       }
     },
     convoResults(){
+      const selectedConvoColors = Object.keys(this.selectedConvoColors).filter(k => this.selectedConvoColors[k])
       return Object.entries(this.allConversations).filter(a => {
         // Conversations in which all selected colors are participants
         const [pageId, pairs] = a
-        const selectedConvoColors = Object.keys(this.selectedConvoColors).filter(k => this.selectedConvoColors[k])
         return selectedConvoColors.every(
-          c => [...pairs].some(p => p.includes(c))
+          c => [...pairs].some(p => p.toUpperCase().includes(c))
       )}).map(
         // Just get the nicknames
         a => {a[1] = a[1].map(pair => pair.split(':')[1]); return a}

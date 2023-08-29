@@ -156,7 +156,10 @@
     watch: {
       'theme'(to, from) {
         this.updateAppIcon()
-      } 
+      },
+      'tabTheme'(to, from) {
+        this.$root.tabTheme = to
+      }
     },
     mounted () {
       this.$nextTick(() => this.updateAppIcon())
@@ -265,10 +268,10 @@
         // ensure we use the link, in case the click has been received by a subelement
         let { target, button } = event
         if (button == 2) {
-          event.preventDefault()
-          // TODO: Sometimes contextMenu is undefined?
-          console.assert(this.$refs.contextMenu, this.$refs)
-          this.$refs.contextMenu.open(event, target)
+          if (this.$refs.contextMenu) {
+            event.preventDefault()
+            this.$refs.contextMenu.open(event, target)
+          }
           return
         } else if (button == 3) {
           event.preventDefault()
@@ -356,6 +359,11 @@
     .invisible {
       visibility: hidden !important;
     }
+
+    .pixelated img {
+        image-rendering: pixelated;
+    }
+
     .hidden {
       &.forceLoad {
         height: 0;
@@ -376,13 +384,8 @@
       @extend .fas;
       content: fa-content($fa-var-chevron-right);
     }
-    &[href^="http://"]:not([href*="127.0.0.1"]):not([href*="localhost"]),
-    &[href^="https://"]:not([href*="127.0.0.1"]):not([href*="localhost"]),
-    &[href^="mailto"]:not([href*="127.0.0.1"]):not([href*="localhost"]),
-    &[href$=".pdf"],
-    // &[href$=".html"]:not([href*="assets://"]) {
-    &[href$=".html"] {
-      &::after{
+    &[href^="http://"], &[href^="https://"], &[href^="mailto"], &[href$=".pdf"], &[href$=".html"] {
+      &:not([href*="127.0.0.1"]):not([href*="localhost"]):not([href*="assets://"])::after{
         @extend %fa-icon;
         @extend .fas;
         content: fa-content($fa-var-external-link-alt);
@@ -390,7 +393,7 @@
         line-height: inherit;
       }
     }
-    &[href$=".jpg"],&[href$=".png"],&[href$=".gif"],&[href$=".swf"],&[href$=".txt"],&[href$=".mp3"],&[href$=".wav"],&[href$=".mp4"],&[href$=".webm"]{
+    &[href$=".jpg"], &[href$=".png"], &[href$=".gif"], &[href$=".swf"], &[href$=".txt"], &[href$=".mp3"], &[href$=".wav"], &[href$=".mp4"], &[href$=".webm"]{
       &::after{
         @extend %fa-icon;
         @extend .fas;

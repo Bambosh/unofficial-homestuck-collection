@@ -16,30 +16,25 @@ export default {
   },
   data(){
     return {
-      windowHeight: window.innerHeight
+      windowHeight: 0
     }
   },
   computed: {
     isHidden() {
-      const isFullscreen = (this.windowHeight === screen.height)
-      return isFullscreen && this.$localData.settings.hideFullscreenHeader
+      const window_is_fullscreen = (this.windowHeight === screen.height)
+      return this.$localData.settings.hideFullscreenHeader && window_is_fullscreen
     }
-  },
-  methods: {
-
   },
   mounted () {
-    // Vue won't let us use innerWidth in a computed function otherwise
-    // since the window object isn't a reactive vue element
-    window.onresize = () => {
-      this.windowHeight = window.innerHeight
-    }
+    // Window object isn't a reactive vue element; react to size w/ listener
+    window.addEventListener("resize", (e) => {
+      this.windowHeight = window.outerHeight
+    })
   }
 }
 </script>
 
 <style lang="scss">
-  
 #appHeader {
   z-index: 4;
   background: var(--header-bg);
@@ -61,5 +56,4 @@ export default {
     }
   }
 }
-  
 </style>

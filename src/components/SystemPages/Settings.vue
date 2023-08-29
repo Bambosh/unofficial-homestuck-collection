@@ -74,7 +74,7 @@
                 {{ theme.text }}
               </option>
             </select>
-            <template v-if="$localData.settings['forceThemeOverride'] || $localData.settings.themeOverride != 'default'">
+            <template v-if="!$isNewReader && ($localData.settings['forceThemeOverride'] || $localData.settings.themeOverride != 'default')">
               <dt><label><input type="checkbox" 
                 name="forceThemeOverride" 
                 v-model="$localData.settings['forceThemeOverride']" 
@@ -116,6 +116,13 @@
               :checked.prop="darkModeChecked === true"
               :indeterminate.prop="darkModeChecked === undefined"
               @click="toggleDarkMode()"> Dark Mode
+            </label>
+            <label v-if="$isNewReader && ($localData.settings['forceThemeOverride'] || $localData.settings.themeOverride != 'default')">
+              <input type="checkbox"
+                name="forceThemeOverride"
+                v-model="$localData.settings['forceThemeOverride']"
+                @click="toggleSetting('forceThemeOverride')">
+              Override page-specific themes
             </label>
           </dt>
 
@@ -315,6 +322,7 @@
           <!-- v-if="$localData.settings.devMode || needReload"  -->
           <button @click="forceReload" class="reload">Reload Application</button>
         </div>
+        <button v-if="$localData.settings.devMode" @click="reloadModList(); archiveReload();" class="reload">Soft reload archive (refresh mods and re-run edits)</button>
       </div>
     </div>
     <div class="card">
@@ -406,8 +414,8 @@ export default {
           desc: "Opening logs on Homestuck pages can cause the scrollbar to suddenly appear, resulting in the whole page shifting to the left. This setting keeps the scrollbar visible at all times to prevent this."
         }, {
           model: 'hideFullscreenHeader', 
-          label: "Hide fullscreen header", 
-          desc: "Hide header content (such as the jump bar, title and tab bars) in fullscreen mode (F11)."
+          label: "Hide header in fullscreen",
+          desc: "Hide the application header (title bar, address bar, and tabs) in fullscreen mode (F11)."
         }, {
           model: "smoothScrolling",
           label: "Enable smooth scrolling",
@@ -426,7 +434,7 @@ export default {
         {
           model: "arrowNav",
           label: "Enable arrow key navigation",
-          desc: "Allows you to navigate forward and backward between pages using the left and right arrow keys."
+          desc: "Allows you to navigate forward and backward between pages using the left and right arrow keys, and open textboxes with space."
         }, {
           model: "openLogs",
           label: "Automatically open logs",
@@ -454,6 +462,10 @@ export default {
           model: "jsFlashes",
           label: "Enable enhanced Flash effects",
           desc: "Some Flash animations have had certain effects enhanced using JavaScript. This has a small chance of introducing performance issues, so try disabling it if you end up experiencing problems. <strong>Highly recommended.</strong>"
+        }, {
+          model: "ruffleFallback",
+          label: "Enable Ruffle flash emulation fallback",
+          desc: "If the built-in flash player is non-functional, use the latest distribution of <a href='https://ruffle.rs/'>Ruffle</a> to emulate flash."
         }, {
           model: "enableHardwareAcceleration",
           label: "Enable hardware acceleration",
@@ -789,7 +801,7 @@ export default {
       this._computedWatchers.modsEnabled.run()
       this._computedWatchers.modsDisabled.run()
       this.$forceUpdate()
-      this.queueArchiveReload()
+      // this.queueArchiveReload()
     },
     scrollToSec(sectionClass) {
       this.$el.querySelector(`.settings.${sectionClass}`).scrollIntoView(true)

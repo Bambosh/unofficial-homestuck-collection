@@ -29,7 +29,7 @@ const store_devmode_key = 'localData.settings.devMode'
 let win = null
 function giveWindow(new_win) {
   win = new_win
-  logger.info("Got window")
+  logger.debug("Got window")
 }
 
 let validatedState = false
@@ -44,8 +44,8 @@ function expectWorkingState(){
 
 // Function exposed for SubSettingsModal, which directly writes to store
 function getModStoreKey(mod_id, k){
-  if (k) {return `mod.${mod_id}.${k}`}
-  return `mod.${mod_id}`
+  if (k) {return `${getModStoreKey(mod_id)}.${k}`}
+  return `mod.${mod_id.replace('.', '-')}`
 }
 
 function getAssetRoute(url) {
@@ -126,11 +126,11 @@ function removeModsFromEnabledList(responsible_mods) {
   // Clear enabled mods
   const old_enabled_mods = getEnabledMods()
   const new_enabled_mods = old_enabled_mods.filter(x => !responsible_mods.includes(x)).filter(x => !x.startsWith("_"))
-  logger.info("Changing modlist", old_enabled_mods, new_enabled_mods)
+  logger.debug("Changing modlist", old_enabled_mods, new_enabled_mods)
 
   // Fully reactive settings clobber
   if (ipcMain) {
-    logger.info("Trying to change modlist from main")
+    logger.debug("Trying to change modlist from main")
     store.set(store_modlist_key, new_enabled_mods)
     if (win) {
       win.webContents.send('RELOAD_LOCALDATA')
@@ -139,12 +139,12 @@ function removeModsFromEnabledList(responsible_mods) {
       logger.warn("Don't have win!")
     }
   } else if (window.vm) {
-    logger.info("Changing modlist from vm")
+    logger.debug("Changing modlist from vm")
     window.vm.$localData.settings["modListEnabled"] = new_enabled_mods
-    logger.info(window.vm.$localData.settings["modListEnabled"])
+    logger.debug(window.vm.$localData.settings["modListEnabled"])
     window.vm.$localData.VM.saveLocalStorage()
   } else {
-    logger.info("Trying to change modlist before vm")
+    logger.warn("Trying to change modlist before vm")
     store.set(store_modlist_key, new_enabled_mods)
   }
 }
@@ -161,7 +161,7 @@ if (ipcMain) {
     if (win) {
       win.webContents.send('MOD_LOAD_FAIL', responsible_mods, e)
     } else {
-      logger.info("MAIN: Mod load failure with issues in", responsible_mods)
+      logger.warn("MAIN: Mod load failure with issues in", responsible_mods)
       logger.error(e)
       logger.error("Don't have win!")
       // This only happens if we can't even display the pretty traceback. Absolute fallback.
@@ -181,7 +181,7 @@ if (ipcMain) {
 
     store.set("needsRecovery", true)
 
-    logger.info("RENDER: Mod load failure with modlist", responsible_mods)
+    logger.warn("RENDER: Mod load failure with modlist", responsible_mods)
     logger.error(e)
 
     window.doErrorRecover = () => {
@@ -232,7 +232,7 @@ if (ipcMain) {
 function bakeRoutes() {
   const enabled_mods = getEnabledMods()
   if (!expectWorkingState()) {
-    logger.info("No asset directory set, not baking any routes")
+    logger.warn("No asset directory set, not baking any routes")
     return
   }
   logger.info("Baking routes for", enabled_mods)
@@ -329,7 +329,7 @@ function getEnabledMods() {
 
 function getEnabledModsJs() {
   if (!modsDir) {
-    logger.info("No asset directory set, can't load any mods.")
+    logger.warn("No asset directory set, can't load any mods.")
     return []
   }
   try {
@@ -525,7 +525,7 @@ function getModJs(mod_dir, options={}) {
     const e1_is_notfound = (e1.code && e1.code == "MODULE_NOT_FOUND")
     if (e1_is_notfound) {
       // Tried singlefile, missing
-      logger.error("Missing file", mod_dir)
+      logger.error("Missing file", mod_dir, e1)
       removeModsFromEnabledList([mod_dir])
       return null
     } else {
@@ -544,29 +544,9 @@ const footnote_categories = ['story']
 
 function editArchive(archive) {
   if (!expectWorkingState()) {
-    logger.info("No asset directory set, probably in new reader setup mode. Not editing the archive.")
+    logger.warn("No asset directory set, probably in new reader setup mode. Not editing the archive.")
     return
   }
-  const enabledModsJs = getEnabledModsJs()
-  enabledModsJs.reverse().forEach((js) => {
-    try {
-      const editfn = js.edit
-      if (editfn) {        
-        logger.info(js._id, "editing archive")
-        editfn(archive)
-        console.assert(archive, js.title, "You blew it up! You nuked the archive!")
-      
-        // Sanity checks
-        // let required_keys = ['mspa', 'social', 'news', 'music', 'comics', 'extras']
-        // required_keys.forEach(key => {
-        //   if (!archive[key]) throw new Error("Archive object missing required key", key)
-        // })
-      }
-    } catch (e) {
-      onModLoadFail([js._id], e)
-      throw e
-    }
-  })
 
   // Footnotes
   archive.footnotes = {}
@@ -575,14 +555,16 @@ function editArchive(archive) {
     archive.footnotes[category] = []
   })
 
+  const enabledModsJs = getEnabledModsJs()
   enabledModsJs.reverse().forEach((js) => {
+    // Load footnotes into archive
     try {
       if (js.footnotes) {
         if (typeof js.footnotes == "string") {
           console.assert(!js._singlefile, js.title, "Single file mods cannot use footnote files!")
-          
+
           const json_path = path.join(
-            js._mod_root_dir, 
+            js._mod_root_dir,
             js.footnotes
           )
 
@@ -600,6 +582,24 @@ function editArchive(archive) {
       }
     } catch (e) {
       onModLoadFail([js._id], e)
+    }
+    // Run archive edit function
+    try {
+      const editfn = js.edit
+      if (editfn) {        
+        logger.info(js._id, "editing archive")
+        editfn(archive)
+        console.assert(archive, js.title, "You blew it up! You nuked the archive!")
+      
+        // Sanity checks
+        // let required_keys = ['mspa', 'social', 'news', 'music', 'comics', 'extras']
+        // required_keys.forEach(key => {
+        //   if (!archive[key]) throw new Error("Archive object missing required key", key)
+        // })
+      }
+    } catch (e) {
+      onModLoadFail([js._id], e)
+      throw e
     }
   })
 }
@@ -723,7 +723,7 @@ function getMixins(){
   if (newPages) {
     var pageComponents = {}
     for (let k in newPages)
-      pageComponents[k] = newPages[k].component
+      pageComponents[k.toUpperCase()] = newPages[k].component
 
     mixable_mods.push({
       title: "!pages",
@@ -910,7 +910,7 @@ if (ipcMain) {
     var mod_folders
     try {
       if (fs.existsSync(assetDir) && !fs.existsSync(modsDir)){
-        logger.info("Asset pack exists but mods dir doesn't, making empty folder")
+        logger.warn("Asset pack exists but mods dir doesn't, making empty folder")
         fs.mkdirSync(modsDir)
       }
       const tree = crawlFileTree(modsDir, false)

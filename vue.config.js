@@ -19,6 +19,15 @@ module.exports = {
     pluginOptions: {
         electronBuilder: {
             nodeIntegration: true,
+            // TEMPORARY: builds failing due to faulty minimization!
+            chainWebpackMainProcess: config => {
+                config.plugins.delete("uglify");
+                config.optimization.minimize(false);
+            },
+            // chainWebpackRendererProcess: config => {
+            //     config.plugins.delete("uglify");
+            //     config.optimization.minimize(false);
+            // },
             builderOptions: {
                 appId: "com.bambosh.unofficialhomestuckcollection",
                 productName: "The Unofficial Homestuck Collection",
@@ -36,7 +45,8 @@ module.exports = {
                     },
                     artifactName: "${productName}-${version}-${os}-${arch}.${ext}",
                     asarUnpack: [
-                        "**/node_modules/sharp/**"
+                        "**/node_modules/sharp/**",
+                        "**/*.node"
                     ]
                 },
                 mac: {
@@ -44,14 +54,16 @@ module.exports = {
                     category: "entertainment",
                     identity: null,
                     asarUnpack: [
-                        "**/node_modules/sharp/**"
+                        "**/node_modules/sharp/**",
+                        "**/*.node"
                     ]
                 },
                 linux: {
                     target: ["AppImage", "tar.gz"],
                     category: "game",
                     asarUnpack: [
-                        "**/node_modules/sharp/**"
+                        "**/node_modules/sharp/**",
+                        "**/*.node"
                     ]
                 }
             }

@@ -2,43 +2,20 @@
     <p class="prattle text" :class="fontFamily" :style="fontStyle" 
         v-html="filteredPrattle" v-if="textType == 'prattle' && !!content" />
 
-    <div class="log" :class="{logHidden: logHidden}" v-else-if="textType == 'log'">
+    <div class="log" :class="{logHidden: logHidden, darkBackground: isDarkBackground}" v-else-if="textType == 'log'">
         <div class="bgshade" v-if="$localData.settings.textOverride.highContrast" :style="{background: isDarkBackground ? '#000A' : '#FFFA'}"/>
 		<button class="logButton" @click="loggle()">
             {{ logButtonText }}
 		</button>
 		<p class="logContent text" :class="fontFamily" :style="fontStyle" 
          v-html="content.replace(/\|.*?\| *\<br \/\>/, '')"></p>
-        <component is="style" v-if="$localData.settings.textOverride.paragraphSpacing">
-          .log .logContent span:not(:first-child) {
-            padding-top: 1em;
-            display: inline-block;
-            white-space: pre-wrap;
-          }          
-          .log .logContent span + span, 
-          .log .logContent br + br + span {
-            padding: initial;
-            display: inline !important;
-          }
-        </component>
 	</div>
 
     <div class="authorlog" v-else-if="textType == 'authorlog'">
 		<p class="logContent text" :class="fontFamily" :style="fontStyle" 
             v-html="content.replace(/\|.*?\| *\<br ?\/?\>/, '')"></p>
-        <component is="style" v-if="$localData.settings.textOverride.paragraphSpacing">
-          .authorlog .logContent span:not(:first-child) {
-            padding-top: 1em;
-            display: inline-block;
-            white-space: pre-wrap;
-          }
-          .authorlog .logContent span + span, 
-          .authorlog .logContent br + br + span {
-            padding: initial;
-            display: inline !important;
-          }
-        </component>
 	</div>
+    <span v-else data-placeholder />
 
 </template>
 
@@ -48,7 +25,7 @@ var Color = require('ts-color-class')
 
 export default {
     name: 'pageText',
-    props: ['pageId', 'content', 'forcetheme'],
+    props: ['pageId', 'content', 'forcetheme', 'startopen'],
     data() {
         return {
             usePurpleLinks: false,
@@ -79,6 +56,7 @@ export default {
             let result = []
             if (this.$localData.settings.textOverride.bold || !this.$localData.settings.textOverride.fontFamily) result.push('bold')
             if (this.$localData.settings.textOverride.fontFamily) result.push(this.$localData.settings.textOverride.fontFamily)
+            if (this.$localData.settings.textOverride.paragraphSpacing) result.push("paragraphSpacing")
             return result
         },
         theme(){
@@ -139,6 +117,9 @@ export default {
     methods: {
         loggle() {
             this.logHidden = !this.logHidden
+        },
+        open() {
+          this.logHidden = false
         },
         getTextType(content) {
             if (!content) return null
@@ -215,7 +196,7 @@ export default {
         },
     },
     mounted() {
-        if (this.$localData.settings.openLogs) {
+        if (this.$localData.settings.openLogs || this.startopen) {
             // Manual exception for pre-ministrife fakeout
             this.logHidden = this.pageId == '007326' 
         }
@@ -251,6 +232,13 @@ export default {
             color: var(--page-links);
             &.visited {
                 color: var(--page-links-visited);
+            }
+        }
+        &.darkBackground .logContent img {
+            &[src="assets://storyfiles/hs2/scraps/shades.png"],
+            &[src="assets://storyfiles/hs2/scraps/trollc00l.gif"],
+            {
+                filter: invert(1);
             }
         }
     }
@@ -292,6 +280,19 @@ export default {
         }
     }
 
+    ::v-deep .logContent.paragraphSpacing {
+        span:not(:first-child) {
+            padding-top: 1em;
+            display: inline-block;
+            white-space: pre-wrap;
+        }
+        span + span,
+        br + br + span {
+            padding: initial;
+            display: inline !important;
+        }
+    }
+
     .authorlog {
         width: 600px;
         margin: 0 0 30px 0;
@@ -317,9 +318,9 @@ export default {
         align-self: center;
         position: relative;
         
-        &.highContrast {
-            background: #ffffff;
-        }
+        // &.highContrast {
+        //     background: #ffffff;
+        // }
         button {
             text-transform: capitalize;
             position: inherit;
@@ -331,7 +332,7 @@ export default {
             padding: 15px 5%;
             text-align: left;
             position: inherit;
-            z-index: 0;
+            z-index: 1;
         }
 
         &.logHidden {
@@ -347,7 +348,7 @@ export default {
             pointer-events: none;
             top: 0;
             left: 0;
-            z-index: -1;
+            z-index: 0;
         }
     }
 </style>

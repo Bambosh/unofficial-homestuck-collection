@@ -31,7 +31,7 @@
           <p>One-upping Problem Sleuth's action-packed GIFs, Homestuck spiced up pivotal moments with Flash animations scored by a lively team of composers. Over time, the music team produced dozens of albums across a variety of genres.</p>
           <div class="links">
             <div class="left bigLink">
-              &gt; <a href="/mspa/6" >Begin Adventure</a>
+              &gt; <a href="/mspa/6" >Begin Homestuck</a>
             </div>
             <div class="center">
               &gt; <a href="/log/6" >Adventure Log</a><br>
@@ -125,6 +125,16 @@
           date="Jan 2019">
           <template v-slot:title>Skaianet Systems</template>
           <p>Tomorrow's canon, today! Homestuck still has plenty in store for you.</p>
+        </HomeRowItem>
+        <HomeRowItem
+          v-if="$archive.extras.epilogues"
+          class="rowItem"
+          href="/epilogues"
+          thumbsrc="assets://archive/epilogues/resources/archive_ep.gif"
+          afterpage="010030"
+          date="Apr 2019">
+          <template v-slot:title>The Homestuck Epilogues</template>
+          <p>Ten years after their adventure began, the heroes are enjoying a well-earned retirement on Earth C. But John still has one last choice to make.</p>
         </HomeRowItem>
       </div>
     </div>

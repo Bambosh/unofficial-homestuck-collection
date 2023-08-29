@@ -8,14 +8,14 @@
       <div class="pageContent">
         <Footnotes :pageId="thisPage.pageId" preface class="footnotesContainer"/>
           <div class="mediaContent">
-              <h2 class="pageTitle" v-text="thisPage.title" v-if="!supercartridge" />
+              <h2 class="pageTitle" v-text="thisPage.title" v-if="!supercartridge" ref="pageTitle"/>
               <div class="media" ref="media">
                   <Media v-for="url in pageMedia" :key="url" :url="url" class="panel"/>
               </div>
           </div>
           <div class="textContent">
               <FlashCredit  :pageId="thisPage.pageId"/>
-              <TextContent :key="thisPage.pageId" :pageId="thisPage.pageId"  :content="thisPage.content"/>
+              <TextContent :key="thisPage.pageId" :pageId="thisPage.pageId"  :content="thisPage.content" ref="textContent"/>
               <PageNav :thisPage="thisPage" 
                 :nextPages="nextPagesArray" ref="pageNav"
                 :class="{'hidden': hideNav}" />
@@ -23,6 +23,7 @@
         <Footnotes :pageId="thisPage.pageId" class="footnotesContainer"/>
       </div>
       <div class="hidden">
+        <!-- Preload images -->
         <Media v-for="url in nextPagesMedia" :key="url" :url="url" class="panel"/>
       </div>
     </div>
@@ -86,7 +87,7 @@ export default {
       } else {
         title = ctx.$archive.mspa.story[p].title + [
           " - Jailbreak", " - Bard Quest", "", " - Problem Sleuth", " - Homestuck Beta", " - Homestuck"
-        ][ctx.$getStory(p) - 1]
+        ][ctx.$getStoryNum(p) - 1]
       }
     }
     return title
@@ -103,7 +104,7 @@ export default {
       }
     },
     storyId() {
-      return this.isRyanquest ? 'ryanquest' : this.$getStory(this.pageNum)
+      return this.isRyanquest ? 'ryanquest' : this.$getStoryNum(this.pageNum)
     },
     pageCollection() {
       const storyDataKey = this.isRyanquest ? 'ryanquest' : 'story'
@@ -127,18 +128,20 @@ export default {
       this.deretcon(media)
       var mediakey = media[0]
 
-      if (this.audioData) {
-        const flashPath = mediakey.substring(0, mediakey.length - 4)
-        this.$logger.info("Found audio for", mediakey, this.audioData, "changing to", `${flashPath}_hq.swf`)
-        media[0] = `${flashPath}_hq.swf`
-      } else if (mediakey.includes(".swf")) {
-        this.$logger.info("Found no audio for", mediakey, this.audioData)
+      if (mediakey) {
+        if (this.audioData) {
+          const flashPath = mediakey.substring(0, mediakey.length - 4)
+          this.$logger.info("Found audio for", mediakey, this.audioData, "changing to", `${flashPath}_hq.swf`)
+          media[0] = `${flashPath}_hq.swf`
+        } else if (mediakey.includes(".swf")) {
+          this.$logger.info("Found no audio for", mediakey, this.audioData)
+        }
       }
 
       return media
     },
     nextPagesArray() {
-      this.$logger.info(`${this.tab.url} - ${this.thisPage.title}`)
+      // this.$logger.info(`${this.tab.url} - ${this.thisPage.title}`)
       let nextPages = []
       this.thisPage.next.forEach(nextID => {
         // Removes [??????] password links if the retcon hasn't been triggered yet
@@ -148,9 +151,9 @@ export default {
       return nextPages
     },
     nextPagesMedia(){
-      return this.nextPagesArray.reduce((acc, page) => {
+      return new Set(this.nextPagesArray.reduce((acc, page) => {
         return [...acc, ...page.media.filter(x => /(gif|png)$/i.test(x))]
-      }, []).map(this.$getResourceURL)
+      }, []).map(this.$getResourceURL))
     },
     pixelated() {
       return this.$localData.settings.pixelScaling
@@ -216,6 +219,15 @@ export default {
         if (this.thisPage.flag.includes("R6") && this.nextPagesArray.length == 2) this.$pushURL(this.$refs.pageNav.nextUrl(this.nextPagesArray[1]))
         else if (this.nextPagesArray.length == 1) this.$pushURL(this.$refs.pageNav.nextUrl(this.nextPagesArray[0]))
       }
+    },
+    spaceBarEvent(e) {
+      // If navigation is hidden, abort now (unless force is on)
+      if (this.hideNav && !this.forceKeyboardEnable)
+        return
+
+      if (this.$refs.textContent) {
+        this.$refs.textContent.open()
+      }
     }
   },
   updated() {
@@ -225,10 +237,6 @@ export default {
 </script>
 
 <style scoped lang="scss">
-  .pixelated::v-deep img{
-    image-rendering: pixelated;
-  }
-
   .pageBody {
     color: var(--font-default);
     background: var(--page-pageBody);
@@ -282,6 +290,23 @@ export default {
       }
     }
 
+    //Small screen check
+    @media only screen and (max-width: 850px) {
+      &{
+        overflow-x: hidden;
+        height: max-content;
+        .navBanner {
+          max-width: 100%;
+        }
+        .pageFrame {
+          max-width: 100%;
+        }
+        ::v-deep div.footer {
+          max-width: 100%;
+        }
+      }
+    }
+
     .pageFrame {
       background: var(--page-pageFrame);
 
@@ -322,14 +347,14 @@ export default {
             padding: 15px 0;
           }
 
-          .media{
+          .media {
             display: flex;
             align-items: center;
             flex-flow: column;
 
             .panel {
               &:not(:last-child) {
-                margin-bottom: 17px;
+                margin-bottom: 20px;
               }
             }            
           }
